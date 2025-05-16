@@ -37,7 +37,7 @@ use futures::{
 use gpui::{
     Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Bounds, Context,
     CursorStyle, Decorations, DragMoveEvent, Empty, Entity, EntityId, EventEmitter, FocusHandle,
-    Focusable, Global, Hsla, KeyContext, Keystroke, ManagedView, MouseButton,
+    Focusable, Global, Hsla, KeyBinding, KeyContext, Keystroke, ManagedView, MouseButton,
     PartiallyMatchedBindings, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size,
     Stateful, Subscription, Task, Tiling, WeakEntity, WindowBounds, WindowHandle, WindowId,
     WindowOptions, action_as, actions, canvas, impl_action_as, impl_actions, point, relative, size,
@@ -91,6 +91,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     env,
     hash::{Hash, Hasher},
+    ops::Rem,
     path::{Path, PathBuf},
     process::ExitStatus,
     rc::Rc,
@@ -4217,35 +4218,72 @@ impl Workspace {
             return Empty.into_any();
         };
 
+        // todo! sorting
+        // todo! panel
+        // todo! delay + setting
+        // todo! enable setting
+
+        const RIGHT_VALUE: Pixels = px(12.);
+        const COLUMN_GAP: Pixels = px(8.);
+        let column_width = rems_from_px(290.).to_pixels(window.rem_size());
+        let column_bounding_width = column_width + COLUMN_GAP;
+        // Subtract COLUMN_GAP twice to account for padding
+        let mut column_count = ((window.viewport_size().width - COLUMN_GAP * 2 - RIGHT_VALUE * 2)
+            / column_bounding_width) as usize;
+        if (window.viewport_size().width - COLUMN_GAP * 2 - RIGHT_VALUE * 2)
+            .0
+            .rem(column_bounding_width.0)
+            > column_width.0
+        {
+            column_count += 1;
+        };
+        let row_count = bindings.bindings.len().div_ceil(column_count);
         let prefix_len = bindings.typed.len();
 
-        let names = v_flex().children(bindings.bindings.iter().map(|binding| {
-            let name = binding.action().humanized_name();
-            h_flex()
-                .h(window.line_height())
-                .child(Label::new(name).size(LabelSize::Small))
-        }));
+        let columns = bindings.bindings.as_slice().chunks(row_count).map(|chunk| {
+            self.render_partially_matched_bindings_column(prefix_len, chunk, window, cx)
+                .w(column_width)
+        });
 
         h_flex()
             .id("partially-matched-bindings")
             .overflow_scroll()
+            .max_h(window.line_height() * 10)
             .absolute()
-            .items_start()
-            .right_3()
-            .bottom_3()
+            .right(RIGHT_VALUE)
+            .bottom_9()
             .elevation_3(cx)
-            .p_2()
-            .gap_1p5()
-            .child(
-                v_flex().children(bindings.bindings.iter().cloned().map(|binding| {
-                    h_flex().h(window.line_height()).child(
-                        ui::KeyBinding::new(binding.strip_prefix(prefix_len), cx)
-                            .size(TextSize::Small.rems(cx)),
-                    )
-                })),
-            )
-            .child(names)
+            .px(COLUMN_GAP)
+            .gap(COLUMN_GAP)
+            .items_start()
+            .children(columns)
             .into_any()
+    }
+
+    fn render_partially_matched_bindings_column(
+        &self,
+        prefix_len: usize,
+        bindings: &[KeyBinding],
+        window: &Window,
+        cx: &Context<Self>,
+    ) -> Div {
+        let names = v_flex().children(bindings.iter().map(|binding| {
+            let name = binding.action().humanized_name();
+            h_flex()
+                .h(window.line_height())
+                .child(Label::new(name).size(LabelSize::Small).truncate())
+        }));
+
+        h_flex()
+            .items_start()
+            .gap_1p5()
+            .child(v_flex().children(bindings.iter().cloned().map(|binding| {
+                h_flex().h(window.line_height()).child(
+                    ui::KeyBinding::new(binding.strip_prefix(prefix_len), cx)
+                        .size(TextSize::Small.rems(cx)),
+                )
+            })))
+            .child(names)
     }
 
     // RPC handlers
