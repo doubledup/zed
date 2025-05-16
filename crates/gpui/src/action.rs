@@ -57,6 +57,32 @@ pub trait Action: Any + Send {
     where
         Self: Sized;
 
+    /// todo! test
+    fn humanized_name(&self) -> String {
+        let name = self.name();
+        let capacity = name.len() + name.chars().filter(|c| c.is_uppercase()).count();
+        let mut result = String::with_capacity(capacity);
+        for char in name.chars() {
+            if char == ':' {
+                if result.ends_with(':') {
+                    result.push(' ');
+                } else {
+                    result.push(':');
+                }
+            } else if char == '_' {
+                result.push(' ');
+            } else if char.is_uppercase() {
+                if !result.ends_with(' ') {
+                    result.push(' ');
+                }
+                result.extend(char.to_lowercase());
+            } else {
+                result.push(char);
+            }
+        }
+        result
+    }
+
     /// Build this action from a JSON value. This is used to construct actions from the keymap.
     /// A value of `{}` will be passed for actions that don't have any parameters.
     fn build(value: serde_json::Value) -> Result<Box<dyn Action>>

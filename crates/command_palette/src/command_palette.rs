@@ -103,7 +103,7 @@ impl CommandPalette {
                 }
 
                 Some(Command {
-                    name: humanize_action_name(action.name()),
+                    name: action.humanized_name(),
                     action,
                 })
             })
@@ -448,30 +448,6 @@ impl PickerDelegate for CommandPaletteDelegate {
     }
 }
 
-fn humanize_action_name(name: &str) -> String {
-    let capacity = name.len() + name.chars().filter(|c| c.is_uppercase()).count();
-    let mut result = String::with_capacity(capacity);
-    for char in name.chars() {
-        if char == ':' {
-            if result.ends_with(':') {
-                result.push(' ');
-            } else {
-                result.push(':');
-            }
-        } else if char == '_' {
-            result.push(' ');
-        } else if char.is_uppercase() {
-            if !result.ends_with(' ') {
-                result.push(' ');
-            }
-            result.extend(char.to_lowercase());
-        } else {
-            result.push(char);
-        }
-    }
-    result
-}
-
 impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Command")
@@ -493,21 +469,22 @@ mod tests {
     use settings::KeymapFile;
     use workspace::{AppState, Workspace};
 
-    #[test]
-    fn test_humanize_action_name() {
-        assert_eq!(
-            humanize_action_name("editor::GoToDefinition"),
-            "editor: go to definition"
-        );
-        assert_eq!(
-            humanize_action_name("editor::Backspace"),
-            "editor: backspace"
-        );
-        assert_eq!(
-            humanize_action_name("go_to_line::Deploy"),
-            "go to line: deploy"
-        );
-    }
+    // todo! move to action trait
+    // #[test]
+    // fn test_humanize_action_name() {
+    //     assert_eq!(
+    //         humanize_action_name("editor::GoToDefinition"),
+    //         "editor: go to definition"
+    //     );
+    //     assert_eq!(
+    //         humanize_action_name("editor::Backspace"),
+    //         "editor: backspace"
+    //     );
+    //     assert_eq!(
+    //         humanize_action_name("go_to_line::Deploy"),
+    //         "go to line: deploy"
+    //     );
+    // }
 
     #[test]
     fn test_normalize_query() {

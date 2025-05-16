@@ -36,11 +36,12 @@ use futures::{
 };
 use gpui::{
     Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Bounds, Context,
-    CursorStyle, Decorations, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle,
-    Focusable, Global, Hsla, KeyContext, Keystroke, ManagedView, MouseButton, PathPromptOptions,
-    Point, PromptLevel, Render, ResizeEdge, Size, Stateful, Subscription, Task, Tiling, WeakEntity,
-    WindowBounds, WindowHandle, WindowId, WindowOptions, action_as, actions, canvas,
-    impl_action_as, impl_actions, point, relative, size, transparent_black,
+    CursorStyle, Decorations, DragMoveEvent, Empty, Entity, EntityId, EventEmitter, FocusHandle,
+    Focusable, Global, Hsla, KeyContext, Keystroke, ManagedView, MouseButton,
+    PartiallyMatchedBindings, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size,
+    Stateful, Subscription, Task, Tiling, WeakEntity, WindowBounds, WindowHandle, WindowId,
+    WindowOptions, action_as, actions, canvas, impl_action_as, impl_actions, point, relative, size,
+    transparent_black,
 };
 pub use history_manager::*;
 pub use item::{
@@ -952,6 +953,7 @@ pub struct Workspace {
     serialized_ssh_project: Option<SerializedSshProject>,
     _items_serializer: Task<Result<()>>,
     session_id: Option<String>,
+    partially_matched_bindings: Option<PartiallyMatchedBindings>,
 }
 
 impl EventEmitter<Event> for Workspace {}
@@ -1229,6 +1231,9 @@ impl Workspace {
                     store.workspaces.remove(&window_handle.clone());
                 })
             }),
+            cx.observe_pending_input(window, |this, window, cx| {
+                this.update_partially_matched_bindings(window, cx);
+            }),
         ];
 
         cx.defer_in(window, |this, window, cx| {
@@ -1284,6 +1289,7 @@ impl Workspace {
             _items_serializer,
             session_id: Some(session_id),
             serialized_ssh_project: None,
+            partially_matched_bindings: None,
         }
     }
 
@@ -4202,6 +4208,32 @@ impl Workspace {
         }
     }
 
+    fn render_partially_matched_bindings(
+        &self,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(bindings) = self.partially_matched_bindings.as_ref() else {
+            return Empty.into_any();
+        };
+
+        v_flex()
+            .absolute()
+            .right_3()
+            .bottom_3()
+            .elevation_3(cx)
+            .p_2()
+            .gap_1()
+            .children(bindings.bindings.iter().cloned().map(|binding| {
+                let name = binding.action().humanized_name().to_owned();
+                h_flex()
+                    .gap_1()
+                    .child(ui::KeyBinding::new(binding, cx).size(TextSize::Small.rems(cx)))
+                    .child(Label::new(name).size(LabelSize::Small))
+            }))
+            .into_any()
+    }
+
     // RPC handlers
 
     fn active_view_for_follower(
@@ -5039,6 +5071,11 @@ impl Workspace {
                 this.update_history(id, HistoryManagerEntry::new(id, &location), cx);
             });
         }
+    }
+
+    fn update_partially_matched_bindings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.partially_matched_bindings = window.partially_matched_bindings();
+        cx.notify();
     }
 
     async fn serialize_items(
@@ -6147,7 +6184,8 @@ impl Render for Workspace {
                         )
                         .child(self.status_bar.clone())
                         .child(self.modal_layer.clone())
-                        .child(self.toast_layer.clone()),
+                        .child(self.toast_layer.clone())
+                        .child(self.render_partially_matched_bindings(window, cx)),
                 ),
             window,
             cx,

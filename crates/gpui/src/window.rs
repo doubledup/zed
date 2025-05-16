@@ -671,10 +671,13 @@ struct PendingInput {
     timer: Option<Task<()>>,
 }
 
+/// todo!
 #[derive(Default, Debug)]
-struct PendingBindings {
-    typed: SmallVec<[Keystroke; 1]>,
-    bindings: Vec<KeyBinding>,
+pub struct PartiallyMatchedBindings {
+    /// todo!
+    pub typed: SmallVec<[Keystroke; 1]>,
+    /// todo!
+    pub bindings: Vec<KeyBinding>,
 }
 
 pub(crate) struct ElementStateBox {
@@ -3312,8 +3315,6 @@ impl Window {
             &dispatch_path,
         );
 
-        dbg!(&match_result);
-
         if !match_result.to_replay.is_empty() {
             self.replay_pending_input(match_result.to_replay, cx)
         }
@@ -3450,8 +3451,9 @@ impl Window {
         self.pending_input.is_some()
     }
 
-    pub fn partially_matched_bindings(&self) -> Option<PendingBindings> {
-        let pending_input = self.pending_input?;
+    /// todo!
+    pub fn partially_matched_bindings(&self) -> Option<PartiallyMatchedBindings> {
+        let pending_input = self.pending_input.as_ref()?;
 
         let node_id = self
             .focus
@@ -3468,8 +3470,9 @@ impl Window {
             .dispatch_tree
             .partial_bindings_for_input(&pending_input.keystrokes, &dispatch_path);
 
-        Some(PendingBindings {
-            typed: pending_input.keystrokes,
+        Some(PartiallyMatchedBindings {
+            // todo! consider borrow
+            typed: pending_input.keystrokes.clone(),
             bindings,
         })
     }
