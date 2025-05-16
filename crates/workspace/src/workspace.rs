@@ -4217,6 +4217,8 @@ impl Workspace {
             return Empty.into_any();
         };
 
+        let prefix_len = bindings.typed.len();
+
         v_flex()
             .absolute()
             .right_3()
@@ -4226,9 +4228,10 @@ impl Workspace {
             .gap_1()
             .children(bindings.bindings.iter().cloned().map(|binding| {
                 let name = binding.action().humanized_name().to_owned();
+                let binding_suffix = binding.strip_prefix(prefix_len);
                 h_flex()
                     .gap_1()
-                    .child(ui::KeyBinding::new(binding, cx).size(TextSize::Small.rems(cx)))
+                    .child(ui::KeyBinding::new(binding_suffix, cx).size(TextSize::Small.rems(cx)))
                     .child(Label::new(name).size(LabelSize::Small))
             }))
             .into_any()

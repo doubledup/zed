@@ -91,6 +91,15 @@ impl KeyBinding {
     pub fn predicate(&self) -> Option<Rc<KeyBindingContextPredicate>> {
         self.context_predicate.as_ref().map(|rc| rc.clone())
     }
+
+    /// Returns a new Keybinding with the first n keystroke stripped
+    pub fn strip_prefix(self, n: usize) -> Self {
+        KeyBinding {
+            action: self.action,
+            keystrokes: self.keystrokes.into_iter().skip(n).collect(),
+            context_predicate: self.context_predicate,
+        }
+    }
 }
 
 impl std::fmt::Debug for KeyBinding {
