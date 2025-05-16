@@ -674,7 +674,7 @@ struct PendingInput {
 #[derive(Default, Debug)]
 struct PendingBindings {
     typed: SmallVec<[Keystroke; 1]>,
-    matches: Vec<KeyBinding>,
+    bindings: Vec<KeyBinding>,
 }
 
 pub(crate) struct ElementStateBox {
@@ -3452,13 +3452,26 @@ impl Window {
 
     pub fn partially_matched_bindings(&self) -> Option<PendingBindings> {
         let pending_input = self.pending_input?;
-        let dispatch_path = self.rendered_frame.dispatch_tree.dispatch_path(node_id);
-        let bindings =  self.rendered_frame.dispatch_tree.partial_bindings_for_input(pending_input.pending, dispatch_)
 
-        PendingBindings {
+        let node_id = self
+            .focus
+            .and_then(|focus_id| {
+                self.rendered_frame
+                    .dispatch_tree
+                    .focusable_node_id(focus_id)
+            })
+            .unwrap_or_else(|| self.rendered_frame.dispatch_tree.root_node_id());
+
+        let dispatch_path = self.rendered_frame.dispatch_tree.dispatch_path(node_id);
+        let bindings = self
+            .rendered_frame
+            .dispatch_tree
+            .partial_bindings_for_input(&pending_input.keystrokes, &dispatch_path);
+
+        Some(PendingBindings {
             typed: pending_input.keystrokes,
             bindings,
-        }
+        })
     }
 
     pub(crate) fn clear_pending_keystrokes(&mut self) {

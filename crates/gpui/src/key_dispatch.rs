@@ -400,7 +400,9 @@ impl DispatchTree {
             .filter_map(|node_id| self.node(*node_id).context.clone())
             .collect();
 
-        self.keymap.borrow().partial_bindings_for_input(input, &context_stack)
+        self.keymap
+            .borrow()
+            .partial_bindings_for_input(input, &context_stack)
     }
 
     /// Returns key bindings that invoke an action on the currently focused element. Bindings are
