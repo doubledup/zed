@@ -4210,7 +4210,7 @@ impl Workspace {
 
     fn render_partially_matched_bindings(
         &self,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some(bindings) = self.partially_matched_bindings.as_ref() else {
@@ -4219,21 +4219,32 @@ impl Workspace {
 
         let prefix_len = bindings.typed.len();
 
-        v_flex()
+        let names = v_flex().children(bindings.bindings.iter().map(|binding| {
+            let name = binding.action().humanized_name();
+            h_flex()
+                .h(window.line_height())
+                .child(Label::new(name).size(LabelSize::Small))
+        }));
+
+        h_flex()
+            .id("partially-matched-bindings")
+            .overflow_scroll()
             .absolute()
+            .items_start()
             .right_3()
             .bottom_3()
             .elevation_3(cx)
             .p_2()
-            .gap_1()
-            .children(bindings.bindings.iter().cloned().map(|binding| {
-                let name = binding.action().humanized_name().to_owned();
-                let binding_suffix = binding.strip_prefix(prefix_len);
-                h_flex()
-                    .gap_1()
-                    .child(ui::KeyBinding::new(binding_suffix, cx).size(TextSize::Small.rems(cx)))
-                    .child(Label::new(name).size(LabelSize::Small))
-            }))
+            .gap_1p5()
+            .child(
+                v_flex().children(bindings.bindings.iter().cloned().map(|binding| {
+                    h_flex().h(window.line_height()).child(
+                        ui::KeyBinding::new(binding.strip_prefix(prefix_len), cx)
+                            .size(TextSize::Small.rems(cx)),
+                    )
+                })),
+            )
+            .child(names)
             .into_any()
     }
 
