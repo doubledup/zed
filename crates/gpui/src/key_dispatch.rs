@@ -390,6 +390,19 @@ impl DispatchTree {
         false
     }
 
+    pub fn partial_bindings_for_input(
+        &self,
+        input: &[Keystroke],
+        dispatch_path: &SmallVec<[DispatchNodeId; 32]>,
+    ) -> Vec<KeyBinding> {
+        let context_stack: Vec<KeyContext> = dispatch_path
+            .iter()
+            .filter_map(|node_id| self.node(*node_id).context.clone())
+            .collect();
+
+        self.keymap.borrow().partial_bindings_for_input(input, &context_stack)
+    }
+
     /// Returns key bindings that invoke an action on the currently focused element. Bindings are
     /// returned in the order they were added. For display, the last binding should take precedence.
     pub fn bindings_for_action(

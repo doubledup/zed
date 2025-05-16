@@ -671,6 +671,12 @@ struct PendingInput {
     timer: Option<Task<()>>,
 }
 
+#[derive(Default, Debug)]
+struct PendingBindings {
+    typed: SmallVec<[Keystroke; 1]>,
+    matches: Vec<KeyBinding>,
+}
+
 pub(crate) struct ElementStateBox {
     pub(crate) inner: Box<dyn Any>,
     #[cfg(debug_assertions)]
@@ -3306,6 +3312,8 @@ impl Window {
             &dispatch_path,
         );
 
+        dbg!(&match_result);
+
         if !match_result.to_replay.is_empty() {
             self.replay_pending_input(match_result.to_replay, cx)
         }
@@ -3440,6 +3448,17 @@ impl Window {
     /// Determine whether a potential multi-stroke key binding is in progress on this window.
     pub fn has_pending_keystrokes(&self) -> bool {
         self.pending_input.is_some()
+    }
+
+    pub fn partially_matched_bindings(&self) -> Option<PendingBindings> {
+        let pending_input = self.pending_input?;
+        let dispatch_path = self.rendered_frame.dispatch_tree.dispatch_path(node_id);
+        let bindings =  self.rendered_frame.dispatch_tree.partial_bindings_for_input(pending_input.pending, dispatch_)
+
+        PendingBindings {
+            typed: pending_input.keystrokes,
+            bindings,
+        }
     }
 
     pub(crate) fn clear_pending_keystrokes(&mut self) {

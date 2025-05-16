@@ -177,6 +177,48 @@ impl Keymap {
         (bindings, is_pending.unwrap_or_default())
     }
 
+    /// todo!
+    pub fn partial_bindings_for_input(
+        &self,
+        input: &[Keystroke],
+        context_stack: &[KeyContext],
+    ) -> Vec<KeyBinding> {
+        let possibilities = self.bindings().rev().filter_map(|binding| {
+            binding
+                .match_keystrokes(input)
+                .map(|pending| (binding, pending))
+        });
+
+        let mut bindings = Vec::new();
+        let mut is_pending = None;
+
+        'outer: for (binding, pending) in possibilities {
+            for depth in (0..=context_stack.len()).rev() {
+                if self.binding_enabled(binding, &context_stack[0..depth]) {
+                    if is_pending.is_none() {
+                        is_pending = Some(pending);
+                    }
+                    // todo! reuse
+                    bindings.push((binding.clone(), depth));
+                    continue 'outer;
+                }
+            }
+        }
+        bindings.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+        let bindings = bindings
+            .into_iter()
+            .map_while(|(binding, _)| {
+                if is_no_action(&*binding.action) {
+                    None
+                } else {
+                    Some(binding)
+                }
+            })
+            .collect();
+
+        bindings
+    }
+
     /// Check if the given binding is enabled, given a certain key context.
     fn binding_enabled(&self, binding: &KeyBinding, context: &[KeyContext]) -> bool {
         // If binding has a context predicate, it must match the current context,
